@@ -1,0 +1,10 @@
+# Normalize line endings to LF on commit, regardless of OS.
+# This ensures consistent diffs and prevents mixed line ending issues
+# when collaborating across Windows/Mac/Linux.
+* text=auto eol=lf
+
+# Binary files — do not modify line endings
+*.png binary
+*.jpg binary
+*.pdf binary
+*.docx binary

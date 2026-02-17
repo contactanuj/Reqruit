@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# Ruff — Linting & Formatting
+# ---------------------------------------------------------------------------
+# Ruff replaces black (formatting), isort (import sorting), and flake8 (linting)
+# with a single Rust-based tool that runs 10-100x faster.
+#
+# Usage:
+#   ruff check .          # Lint
+#   ruff check --fix .    # Lint + auto-fix
+#   ruff format .         # Format (like black)
+#
+# Alternative tools (all replaced by ruff):
+#   black: formatting only, Python-based, slower
+#   isort: import sorting only, separate config
+#   flake8: linting only, plugin ecosystem fragmented
+#   pylint: more opinionated, significantly slower
+# ---------------------------------------------------------------------------
+
+# Target Python version — matches our pyproject.toml requires-python
+target-version = "py311"
+
+# Line length — 88 is black's default, widely adopted.
+# PEP 8 suggests 79 but 88 is the modern community consensus.
+line-length = 88
+
+# Directories to exclude from linting
+exclude = [
+    ".venv",
+    "__pycache__",
+    "migrations",
+    ".git",
+]
+
+[lint]
+# Rule sets to enable. Each letter prefix maps to a linting tool:
+#   E, W = pycodestyle (errors, warnings)
+#   F   = pyflakes (unused imports, undefined names)
+#   I   = isort (import ordering)
+#   N   = pep8-naming (naming conventions)
+#   UP  = pyupgrade (modernize syntax for target Python version)
+#   B   = flake8-bugbear (common bug patterns)
+#   SIM = flake8-simplify (simplifiable code)
+#   ASYNC = flake8-async (async antipatterns — relevant for our full-async codebase)
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "ASYNC"]
+
+# Rules to ignore:
+#   E501: line too long — handled by the formatter, not the linter
+ignore = ["E501"]
+
+[lint.isort]
+# Import sorting configuration.
+# known-first-party tells ruff which imports are "ours" vs third-party.
+known-first-party = ["src"]
+
+[format]
+# Use double quotes (consistent with black's default and most Python projects).
+quote-style = "double"
+
+# Use Unix line endings (LF) even on Windows for git consistency.
+line-ending = "lf"

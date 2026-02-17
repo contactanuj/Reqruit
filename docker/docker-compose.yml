@@ -1,0 +1,106 @@
+# ---------------------------------------------------------------------------
+# Docker Compose — Reqruit
+# ---------------------------------------------------------------------------
+# Three services: FastAPI app + MongoDB + Weaviate.
+# Same file for development and production (Docker Compose everywhere).
+#
+# Usage:
+#   docker compose up -d                      # Start all services
+#   docker compose up -d mongodb weaviate     # Start infra only (for local dev)
+#   docker compose down                       # Stop all services
+#   docker compose down -v                    # Stop and delete volumes (reset data)
+#
+# Design decisions:
+#   - Single compose file (not separate dev/prod): keeps things simple for a
+#     personal learning project. Environment differences are handled via .env.
+#   - Named volumes for data persistence: survives container restarts.
+#   - Weaviate DEFAULT_VECTORIZER_MODULE=none: we generate embeddings app-side
+#     using BAAI/bge-small-en-v1.5, not via Weaviate's text2vec modules.
+#   - MongoDB without auth for local dev. Production should add auth via
+#     MONGO_INITDB_ROOT_USERNAME/PASSWORD environment variables.
+#
+# Alternative approaches:
+#   - Separate docker-compose.dev.yml + docker-compose.prod.yml: more flexible
+#     but adds maintenance overhead. Use `docker compose -f` to merge files.
+#   - Kubernetes: overkill for a single-user app, adds significant complexity.
+#   - Cloud-managed services (Atlas, WCS): good for production but costs money
+#     during development. We defer cloud choice until deployment time.
+# ---------------------------------------------------------------------------
+
+services:
+  # -- FastAPI Application --
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    depends_on:
+      mongodb:
+        condition: service_started
+      weaviate:
+        condition: service_started
+    # Mount source code for development hot-reload.
+    # In production, the code is baked into the image (no volume mount).
+    volumes:
+      - ../src:/app/src:ro
+    restart: unless-stopped
+
+  # -- MongoDB (Operational Database) --
+  # Stores: users, profiles, resumes, jobs, companies, contacts, applications,
+  # documents, outreach_messages, interviews, star_stories, llm_usage,
+  # and LangGraph workflow checkpoints (via MongoDBSaver).
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    # Production: uncomment and set credentials in .env
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+    #   MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    restart: unless-stopped
+
+  # -- Weaviate (Vector Database) --
+  # Stores: ResumeChunk, JobEmbedding, CoverLetterEmbedding, STARStoryEmbedding.
+  # Used for hybrid search (BM25 + vector) with metadata filtering.
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.28.4
+    ports:
+      - "8080:8080"     # REST API
+      - "50051:50051"   # gRPC (used by weaviate-client v4 for batch operations)
+    environment:
+      # -- Core --
+      QUERY_DEFAULTS_LIMIT: 25
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      CLUSTER_HOSTNAME: "node1"
+
+      # -- Auth --
+      # Anonymous access for local development. Production should use API key auth:
+      #   AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'false'
+      #   AUTHENTICATION_APIKEY_ENABLED: 'true'
+      #   AUTHENTICATION_APIKEY_ALLOWED_KEYS: 'your-api-key'
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+
+      # -- Vectorizer --
+      # IMPORTANT: Set to 'none' because we generate embeddings app-side using
+      # BAAI/bge-small-en-v1.5 (free, local). Weaviate stores raw vectors only.
+      #
+      # Alternative: text2vec-openai or text2vec-transformers modules let Weaviate
+      # generate embeddings internally. This simplifies the client code but:
+      #   - text2vec-openai: costs money per embedding call
+      #   - text2vec-transformers: requires GPU container, heavier infrastructure
+      # App-side embeddings give us full control and zero cost.
+      DEFAULT_VECTORIZER_MODULE: "none"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
+  weaviate_data:
+    driver: local

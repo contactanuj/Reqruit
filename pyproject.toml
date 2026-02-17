@@ -1,0 +1,143 @@
+[project]
+name = "reqruit"
+version = "0.1.0"
+description = "AI-powered job hunting assistant built with production-grade agentic AI patterns"
+readme = "README.md"
+requires-python = ">=3.11"
+
+# ---------------------------------------------------------------------------
+# Dependencies are organized by purpose rather than alphabetically.
+# Each group has a comment explaining what it provides to the system.
+#
+# Alternatives considered for key choices:
+#   - FastAPI over Flask/Django: async-native, Pydantic integration, auto OpenAPI docs
+#   - Beanie over MongoEngine/ODMantic: async, Pydantic-native, active community
+#   - PyJWT over python-jose: python-jose unmaintained since 2021, FastAPI docs recommend PyJWT
+#   - structlog over stdlib logging: structured JSON output, context binding, better for production
+#   - ruff over black+isort+flake8: single tool, 10-100x faster, same rules
+# ---------------------------------------------------------------------------
+dependencies = [
+    # -- API Framework --
+    # FastAPI: async-native web framework with automatic OpenAPI docs and Pydantic validation.
+    # uvicorn: ASGI server. The [standard] extra includes uvloop (Linux/Mac) and httptools for
+    # better performance. On Windows it falls back to asyncio, which is fine for development.
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+
+    # -- Validation & Configuration --
+    # pydantic: data validation using Python type hints. Core of our schema strategy — one model
+    # definition shared across API schemas, DB documents, and validation logic.
+    # pydantic-settings: environment variable loading with type safety and .env file support.
+    # Alternative: python-decouple (simpler but no type safety), dynaconf (heavier, multi-env).
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+
+    # -- Database: MongoDB --
+    # beanie: async MongoDB ODM built on Pydantic. Documents ARE Pydantic models.
+    # As of Beanie 2.0, it uses PyMongo's native async API directly (not Motor).
+    # Alternative: MongoEngine (sync only), ODMantic (less mature), raw PyMongo (more boilerplate).
+    "beanie>=2.0.0",
+
+    # -- Database: Weaviate (Vector Search) --
+    # weaviate-client v4: collections-based API for vector + hybrid search.
+    # v3 API (client.query.get) is deprecated. v4 uses client.collections.use() pattern.
+    # Self-hosted via Docker for development. App-side embeddings (no vectorizer modules).
+    "weaviate-client>=4.10.0",
+
+    # -- LLM Providers (via LangChain) --
+    # LangChain handles provider-specific API details. Our ModelManager wrapper adds routing,
+    # cost tracking, and circuit breaker logic on top.
+    # langchain-core: base abstractions (BaseChatModel, messages, prompts).
+    # Provider packages: each wraps one LLM provider's API.
+    "langchain-core>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-openai>=0.3.0",
+    "langchain-groq>=0.2.0",
+
+    # -- Embeddings --
+    # langchain-huggingface: LangChain wrapper for HuggingFace embedding models.
+    # sentence-transformers: the actual embedding runtime (loads BAAI/bge-small-en-v1.5).
+    # We generate embeddings app-side and store raw vectors in Weaviate.
+    # This avoids vendor lock-in to OpenAI embeddings and keeps embedding costs at zero.
+    "langchain-huggingface>=0.1.0",
+    "sentence-transformers>=4.0.0",
+
+    # -- Agent Framework --
+    # langgraph: state machine workflow engine with cycles, persistence, and human-in-the-loop.
+    # langgraph-checkpoint-mongodb: persists workflow checkpoints to MongoDB so users can
+    # pause and resume multi-day job hunting workflows across server restarts.
+    "langgraph>=0.4.0",
+    "langgraph-checkpoint-mongodb>=0.3.0",
+
+    # -- Auth & Security --
+    # PyJWT: JWT encoding/decoding. The [crypto] extra adds cryptography for RS256 support.
+    # Replaces python-jose which has been unmaintained since 2021.
+    # FastAPI official docs switched to recommending PyJWT in 2025.
+    # passlib: password hashing with bcrypt. Industry standard for storing user passwords.
+    # python-multipart: required by FastAPI for form data parsing (file uploads, OAuth2 forms).
+    "PyJWT[crypto]>=2.10.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.18",
+
+    # -- HTTP Client --
+    # httpx: async HTTP client for external API calls (job boards, LinkedIn, company research).
+    # Alternative: aiohttp (lower-level), requests (sync only).
+    "httpx>=0.28.0",
+
+    # -- Observability --
+    # structlog: structured logging with JSON output. Binds context (user_id, agent_name)
+    # to log entries. Production logs go to MongoDB llm_usage collection.
+    # langsmith: LangSmith tracing for development. Auto-traces all LangGraph nodes and LLM calls.
+    # Zero-code setup: just set LANGCHAIN_TRACING_V2=true and provide API key.
+    "structlog>=24.0.0",
+    "langsmith>=0.3.0",
+
+    # -- Streaming --
+    # sse-starlette: Server-Sent Events support for FastAPI. Used for real-time agent output
+    # streaming (token-by-token cover letter generation, progress events).
+    # Alternative: WebSockets (bidirectional, more complex). SSE is simpler for one-way streaming
+    # and naturally fits LangGraph's streaming output pattern.
+    "sse-starlette>=2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    # -- Testing --
+    # pytest: test runner. pytest-asyncio: async test support (our entire codebase is async).
+    # pytest-cov: coverage reporting. pytest-mock: mocker fixture for clean mocking.
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+
+    # -- Linting & Formatting --
+    # ruff: single tool that replaces black (formatting), isort (import sorting), and
+    # flake8 (linting). Written in Rust, 10-100x faster than the tools it replaces.
+    # Configuration lives in ruff.toml at project root.
+    "ruff>=0.9.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# ---------------------------------------------------------------------------
+# Hatch build configuration
+# ---------------------------------------------------------------------------
+# Hatchling expects a package directory matching the project name by default
+# (e.g., reqruit/). Our package is named `src/` instead,
+# so we explicitly tell hatchling where to find it.
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+# ---------------------------------------------------------------------------
+# Pytest configuration
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+# asyncio_mode = "auto": all async functions are treated as async tests
+# without needing @pytest.mark.asyncio on each one. Reduces boilerplate.
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

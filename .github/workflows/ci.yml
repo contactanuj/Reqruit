@@ -1,16 +1,20 @@
 name: CI
 
-# Run on every push and pull request to main.
-# Unit tests only — integration tests require real services and run manually.
 on:
   push:
     branches: ["main", "develop"]
   pull_request:
     branches: ["main"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    name: Unit Tests (Python ${{ matrix.python-version }})
+  # ===== BACKEND =====
+
+  backend-test:
+    name: Backend Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
 
     strategy:
@@ -37,7 +41,6 @@ jobs:
       - name: Run unit tests with coverage
         working-directory: backend
         env:
-          # Stub values — unit tests mock all external services
           APP_ENV: testing
           MONGODB_URL: mongodb://localhost:27017
           MONGODB_DATABASE: reqruit_test
@@ -59,8 +62,8 @@ jobs:
           files: backend/coverage.xml
           fail_ci_if_error: false
 
-  lint:
-    name: Lint
+  backend-lint:
+    name: Backend Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -83,3 +86,91 @@ jobs:
       - name: Run ruff formatter check
         working-directory: backend
         run: uv run ruff format --check src/ tests/
+
+  # ===== FRONTEND =====
+
+  frontend-ci:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: frontend
+        run: pnpm run lint
+
+      - name: Type check
+        working-directory: frontend
+        run: pnpm run typecheck
+
+      - name: Unit tests with coverage
+        working-directory: frontend
+        run: pnpm run test:coverage
+        env:
+          CI: true
+
+      - name: ARIA accessibility check
+        working-directory: frontend
+        run: pnpm run test:axe
+        env:
+          CI: true
+
+      - name: Build
+        working-directory: frontend
+        run: pnpm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: frontend/apps/web/coverage/lcov.info
+
+  frontend-e2e:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+    needs: frontend-ci
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E tests
+        working-directory: frontend
+        run: pnpm run test:e2e
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: test-secret-for-ci

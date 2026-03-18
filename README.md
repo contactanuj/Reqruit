@@ -1,59 +1,80 @@
 # Reqruit
 
-> AI-powered job hunting assistant built with production-grade agentic AI patterns.
+> AI-powered job hunting assistant — a production-grade deep-dive into agentic AI engineering.
 
-Reqruit automates the entire job search lifecycle — from resume parsing and job discovery to cover letter generation and interview preparation. Built as a hands-on deep-dive into 12+ agentic AI concepts using LangGraph, MongoDB, Weaviate, and multi-provider LLM routing.
+Reqruit automates the full job search lifecycle: resume parsing, semantic job matching, AI cover letter generation with human-in-the-loop review, interview preparation, and pipeline tracking. Built as a learning vehicle for 12 agentic AI concepts implemented at production standards.
+
+```text
+494 unit tests passing  |  0 lint errors  |  Python 3.11+  |  FastAPI + LangGraph + MongoDB + Weaviate
+```
 
 ---
 
 ## What It Does
 
 ```text
-PROFILE SETUP ──> DISCOVER JOBS ──> APPLY ──> PREPARE ──> TRACK
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │                     JOB HUNT LIFECYCLE                              │
+ ├──────────────┬──────────────┬──────────────┬──────────────┬─────────┤
+ │  1. PROFILE  │  2. DISCOVER │   3. APPLY   │  4. PREPARE  │ 5.TRACK │
+ │              │              │              │              │         │
+ │ Upload       │ Search jobs  │ Tailor       │ Company      │ Kanban  │
+ │ resume       │ Match to     │ resume per   │ deep-dive    │ board   │
+ │              │ profile      │ JD           │              │         │
+ │ Extract      │              │ Generate     │ Behavioral   │ Status  │
+ │ skills &     │ Research     │ cover letter │ questions    │ machine │
+ │ experience   │ companies    │ (HITL SSE)   │ from JD      │         │
+ │              │              │              │              │         │
+ │ Build        │ Find         │ Draft        │ STAR story   │ Notes & │
+ │ profile      │ contacts     │ outreach     │ preparation  │ follow- │
+ │              │              │              │              │ ups     │
+ └──────────────┴──────────────┴──────────────┴──────────────┴─────────┘
 ```
 
-| Stage | What Happens | Agents |
-|-------|-------------|--------|
-| **Profile Setup** | Upload resume, extract skills and experience, build career profile | ResumeParser, EntityExtractor, ProfileEnhancer |
-| **Discover Jobs** | Search listings, match against profile, research companies, find contacts | JobSearcher, JobMatcher, CompanyResearcher, POCFinder |
-| **Apply** | Tailor resumes per JD, generate cover letters, draft outreach messages | ResumeTailor, CoverLetterWriter, OutreachComposer |
-| **Prepare** | Company deep-dives, behavioral questions, STAR stories, mock interviews | CompanyBrief, QuestionGenerator, STARHelper, MockInterviewer |
-| **Track** | Pipeline dashboard, follow-up reminders, response analytics | UI + background jobs |
-
-Every critical action (sending a cover letter, submitting an application) goes through a human approval gate before execution.
+Every critical action — sending a cover letter, submitting an application, sending outreach — has a **human approval gate** before execution.
 
 ---
 
 ## Architecture
 
 ```text
-                            FastAPI (async)
-                                 |
-            +--------------------+--------------------+
-            |                    |                    |
-       Service Layer        Agent Layer         Workflow Engine
-      (orchestration)    (13 specialized)      (LangGraph graphs)
-            |                    |                    |
-            +--------------------+--------------------+
-                                 |
-                       LLM Provider Layer
-                  (routing, circuit breaker, cost tracking)
-                                 |
-                  +--------------+--------------+
-                  |                             |
-             MongoDB (Beanie)           Weaviate v4
-          12 operational collections   4 vector collections
-          + workflow checkpoints       hybrid search (BM25 + vector)
+                         ┌─────────────────────────┐
+                         │     FastAPI (async)      │
+                         │  JWT auth  │  SSE stream │
+                         └─────────────────────────┘
+                                      │
+         ┌────────────────────────────┼────────────────────────────┐
+         │                            │                            │
+   ┌─────▼──────┐            ┌────────▼───────┐          ┌────────▼───────┐
+   │  Services  │            │  Agent Layer   │          │   Workflows    │
+   │            │            │  (13 agents)   │          │  (LangGraph)   │
+   │ Indexing   │            │                │          │                │
+   │ Metrics    │            │ ResumeParser   │          │ CoverLetter    │
+   │            │            │ CoverLetter    │          │ (HITL + SSE)   │
+   └─────┬──────┘            │ JobMatcher(n/i)│          └────────┬───────┘
+         │                   └────────┬───────┘                   │
+         │                            │                            │
+         │              ┌─────────────▼────────────────────────────┤
+         │              │           LLM Provider Layer              │
+         │              │                                           │
+         │              │  Task-based routing → Claude / GPT / Groq │
+         │              │  Circuit breaker  │  Cost tracking        │
+         │              └─────────────┬─────────────────────────────┘
+         │                            │
+         └───────────────┬────────────┘
+                         │
+         ┌───────────────┼───────────────────────────────┐
+         │               │                               │
+   ┌─────▼──────┐  ┌─────▼──────────┐          ┌────────▼───────┐
+   │  MongoDB   │  │   Weaviate v4  │          │   RAG System   │
+   │  (Beanie)  │  │  (4 vector     │          │                │
+   │            │  │   collections) │          │ BGE-small      │
+   │ 12 collec- │  │                │          │ embeddings     │
+   │ tions      │  │ Hybrid search  │          │ (384d, free)   │
+   │ Checkpoints│  │ BM25 + vector  │          │ Doc-aware      │
+   │ LLM usage  │  │ HNSW index     │          │ chunking       │
+   └────────────┘  └────────────────┘          └────────────────┘
 ```
-
-### Key Design Choices
-
-- **13 specialized agents** instead of one mega-agent — each focused, testable, cost-optimized with its own LLM model
-- **Task-based LLM routing** — cover letters go to Claude Sonnet, data extraction to GPT-4o-mini, quick tasks to Groq (free)
-- **Per-agent memory recipes** — each agent has tuned relevance/recency retrieval weights, not one-size-fits-all
-- **Document-aware RAG chunking** — resumes and JDs split by section headings, keeping semantic context intact
-- **Delete-before-reindex** — idempotent re-indexing that handles structural changes correctly
-- **Circuit breaker** per LLM provider — skips known-broken providers, auto-recovers when they return
 
 ---
 
@@ -61,223 +82,236 @@ Every critical action (sending a cover letter, submitting an application) goes t
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
-| Language | Python 3.11+ | Industry standard for AI/ML |
-| Package Manager | uv | 10-100x faster than Poetry |
-| API | FastAPI (full async) | Pydantic-native, auto OpenAPI docs |
-| Operational DB | MongoDB (Beanie 2.0) | Flexible documents, async Pydantic ODM |
-| Vector DB | Weaviate v4 | Dedicated HNSW, free hybrid search |
-| Agent Framework | LangGraph | State machines, checkpoints, HITL |
-| LLM Primary | Anthropic Claude | Best reasoning and creative writing |
-| LLM Secondary | OpenAI GPT | Strong at structured JSON extraction |
-| LLM Free Fallback | Groq Llama | 500K tokens/day free tier |
-| Embeddings | BAAI/bge-small-en-v1.5 | Free, local, 384 dims, zero API cost |
-| Observability | LangSmith + structlog | Dev tracing + production metrics |
-| Auth | JWT via PyJWT | Stateless access (15min) + refresh (7d) tokens |
-| Streaming | SSE | Real-time agent output, token-by-token |
-| Testing | pytest + pytest-asyncio | 327+ unit tests, async-native |
-| Linting | ruff | Replaces black + isort + flake8, 10-100x faster |
-| Containers | Docker Compose | Same config for dev and prod |
+| Language | Python 3.11+ | `StrEnum`, `match`, full async |
+| Package Manager | uv | 10-100x faster than pip/Poetry |
+| API | FastAPI (full async) | Pydantic-native, auto OpenAPI, SSE |
+| Operational DB | MongoDB + Beanie 2.0 ODM | Schema-flexible, Pydantic documents |
+| Vector DB | Weaviate v4 (Docker) | HNSW, hybrid BM25+vector, multi-tenancy |
+| Agent Framework | LangGraph | State machines, HITL, persistent checkpoints |
+| LLM Primary | Anthropic Claude (Sonnet) | Best reasoning and creative writing |
+| LLM Secondary | OpenAI GPT-4o-mini | Structured JSON extraction |
+| LLM Free Fallback | Groq Llama 3.3 70B | 500K tokens/day free |
+| Embeddings | BAAI/bge-small-en-v1.5 | Free, local, 384d, zero API cost |
+| Observability | LangSmith + structlog | Dev tracing + prod JSON logs |
+| Auth | PyJWT (HS256) | Access (15min) + Refresh (7d) tokens |
+| Streaming | Server-Sent Events (SSE) | Real-time LangGraph output |
+| Testing | pytest + pytest-asyncio | 494 unit tests, `asyncio_mode=auto` |
+| Linting | ruff | Replaces black + isort + flake8 |
+| Containers | Docker Compose | App + MongoDB + Weaviate |
 | CI | GitHub Actions | Auto-test on every push |
 
 ---
 
-## Project Structure
-
-```text
-src/
-├── api/               # FastAPI routes, middleware, dependencies
-│   ├── main.py        # App factory, health check, exception handlers
-│   ├── dependencies.py
-│   ├── middleware/
-│   └── routes/
-├── core/              # Config, security, exceptions
-│   ├── config.py      # Pydantic Settings with composed sub-models
-│   └── exceptions.py  # AppError hierarchy (maps to HTTP status codes)
-├── db/
-│   ├── mongodb.py     # Beanie init + async connection lifecycle
-│   ├── weaviate_client.py
-│   └── documents/     # 12 Beanie document models (Pydantic-based)
-├── repositories/      # Data access layer (Repository Pattern)
-│   ├── base.py        # BaseRepository[T] — generic CRUD for MongoDB
-│   ├── weaviate_base.py  # WeaviateRepository — generic vector ops
-│   └── *_repository.py   # Collection-specific repos
-├── services/          # Business logic orchestration
-│   └── indexing_service.py  # RAG write-path (fetch → chunk → embed → store)
-├── llm/
-│   ├── manager.py     # ModelManager with task-based routing
-│   ├── providers/     # Provider configs (Anthropic, OpenAI, Groq)
-│   ├── circuit_breaker.py
-│   └── cost_tracker.py
-├── agents/            # 13 specialized AI agents
-│   ├── base.py        # BaseAgent — callable as LangGraph nodes
-│   └── cover_letter.py
-├── workflows/
-│   ├── states/        # LangGraph TypedDict state definitions
-│   ├── graphs/        # Workflow graph definitions with HITL
-│   └── checkpointer.py
-├── rag/
-│   ├── embeddings.py  # BGE-small-en-v1.5 lifecycle (init/close/get)
-│   ├── retriever.py   # Weaviate search bridge (embed + search)
-│   └── chunker.py     # Document-aware + fixed-size chunking
-├── memory/
-│   ├── types.py       # MemoryItem, MemoryContext dataclasses
-│   ├── recipes.py     # Per-agent retrieval recipe config table
-│   ├── retrieval.py   # Memory retrieval orchestrator
-│   └── summarizer.py  # LLM-powered message summarization
-└── guardrails/
-    ├── input_validator.py
-    ├── output_validator.py
-    └── pii_detector.py
-tests/
-├── unit/              # 327+ tests, no external deps, runs in CI
-├── integration/       # Real LLM/DB calls, manual runs
-└── conftest.py
-docker/
-├── docker-compose.yml # App + MongoDB + Weaviate
-└── Dockerfile
-```
-
----
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.11+
-- [uv](https://docs.astral.sh/uv/) (package manager)
-- Docker and Docker Compose (for MongoDB + Weaviate)
+- [uv](https://docs.astral.sh/uv/) (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- Docker + Docker Compose
 
-### Setup
+### 1. Install
 
 ```bash
-# Clone and install
 git clone https://github.com/your-username/reqruit.git
 cd reqruit
-uv sync
+cd backend && uv sync
+```
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys (at minimum, set GROQ_API_KEY — it's free)
+### 2. Configure
 
-# Start infrastructure
+```bash
+cp backend/.env.example backend/.env
+# Minimum required: set GROQ_API_KEY (free at console.groq.com)
+# Optional: ANTHROPIC_API_KEY, OPENAI_API_KEY for higher-quality outputs
+# Required: change JWT_SECRET_KEY from default in production
+```
+
+### 3. Start Infrastructure
+
+```bash
 docker compose -f docker/docker-compose.yml up -d mongodb weaviate
+# MongoDB: localhost:27017
+# Weaviate: localhost:8080
+```
 
-# Run the API server
+### 4. Run the API
+
+```bash
+cd backend
 uv run uvicorn src.api.main:app --reload
+# API:    http://localhost:8000
+# Docs:   http://localhost:8000/docs  (Swagger UI, dev only)
+# Health: http://localhost:8000/health
 ```
 
-### Running Tests
+### 5. Register and Use
 
 ```bash
-uv run pytest                        # All tests
-uv run pytest tests/unit/ -v         # Unit tests (verbose)
-uv run pytest --cov                  # With coverage report
-```
+# Register
+curl -X POST http://localhost:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com", "password": "yourpassword"}'
 
-### Linting
-
-```bash
-uv run ruff check src/ tests/        # Check for issues
-uv run ruff check --fix src/ tests/  # Auto-fix
-uv run ruff format src/ tests/       # Format code
+# Login → get access_token
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com", "password": "yourpassword"}'
 ```
 
 ---
 
-## Data Model
+## API Overview
 
-### MongoDB (12 Collections)
+| Route Group | Prefix | Stage | Key Endpoints |
+|-------------|--------|-------|---------------|
+| Auth | `/auth` | — | register, login, refresh, me |
+| Profile | `/profile` | 1 – Setup | GET/PATCH profile, upload resume |
+| Jobs | `/jobs` | 2 – Discover | manual add, list, delete, contacts |
+| Apply | `/apply` | 3 – Apply | cover letter (SSE + HITL) |
+| Track | `/track` | 5 – Track | kanban board, status transitions |
+| System | — | — | `/health`, `/health/ready` |
 
-| Collection | Purpose |
-|------------|---------|
-| `users` | Authentication (email, hashed_password) |
-| `profiles` | Career data (skills, preferences, target roles) |
-| `resumes` | Resume documents (raw text, parsed data, versions) |
-| `jobs` | Job listings (title, description, requirements, salary) |
-| `companies` | Company info (culture, tech stack, research notes) |
-| `contacts` | LinkedIn POCs per company |
-| `applications` | Pipeline tracking (status, match score, timestamps) |
-| `documents` | AI-generated content (cover letters, tailored resumes) |
-| `outreach_messages` | LinkedIn messages (recruiter, engineer, manager templates) |
-| `interviews` | Interview records (schedule, type, notes, questions) |
-| `star_stories` | Behavioral examples (situation, task, action, result) |
-| `llm_usage` | Cost tracking (agent, model, tokens, cost per request) |
-
-### Weaviate (4 Vector Collections)
-
-| Collection | Purpose | Embedding |
-|------------|---------|-----------|
-| `ResumeChunk` | Resume sections for semantic matching | BGE-small (384d) |
-| `JobEmbedding` | Job descriptions for similarity search | BGE-small (384d) |
-| `CoverLetterEmbedding` | Past cover letters for reuse | BGE-small (384d) |
-| `STARStoryEmbedding` | Behavioral stories matched to questions | BGE-small (384d) |
+See [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) for the complete endpoint reference with schemas and error codes.
 
 ---
 
-## Implementation Progress
+## Key Patterns
+
+### Human-in-the-Loop with SSE
+
+```text
+POST /apply/applications/{id}/cover-letter  → 202 + thread_id (no LLM calls)
+GET  /apply/applications/{id}/cover-letter/stream?thread_id=X
+     → SSE stream: node_complete events → awaiting_review (graph pauses)
+POST /apply/applications/{id}/cover-letter/review
+     → {"action": "approve"} or {"action": "revise", "feedback": "..."}
+     → graph resumes from checkpoint, no re-computation
+```
+
+### Application State Machine
+
+```text
+SAVED ──→ APPLIED ──→ INTERVIEWING ──→ OFFERED ──→ ACCEPTED (terminal)
+    │                              └──→ REJECTED  (terminal)
+    └──────────────────────────────────→ WITHDRAWN (terminal)
+```
+
+### Two-Query Pattern (No N+1)
+
+```python
+# One query for applications, one batch query for all jobs
+applications = await app_repo.get_for_user(user_id)
+job_ids = [app.job_id for app in applications]
+jobs = await job_repo.find_by_ids(job_ids)       # IN query, not per-app
+job_map = {str(j.id): j for j in jobs}
+```
+
+### LLM Routing with Fallback
+
+```text
+Task: COVER_LETTER
+  → Try Claude Sonnet    (available + circuit closed) → use it
+  → Try GPT-4o           (not configured)             → skip
+  → Try Groq Llama 70B  (fallback)                   → use if Claude fails
+```
+
+---
+
+## Implementation Status
 
 | Module | Status | Tests |
 |--------|--------|-------|
-| 1. Foundation | Complete | 2 |
-| 2. Database Layer | Complete | 66 |
-| 3. LLM Provider | Complete | 77 |
-| 4. Agent Architecture | Complete | 41 |
-| 5. Memory Systems | Complete | 74 |
-| 6. RAG Pipeline | Complete | 67 |
-| 7. API Layer | Planned | -- |
-| 8. Guardrails | Planned | -- |
-| 9. Evaluation | Planned | -- |
-| 10. Deployment | Planned | -- |
-
-**Total: 327 tests passing across 6 completed modules.**
+| 1. Foundation | ✅ Complete | 2 |
+| 2. Database Layer | ✅ Complete | 66 |
+| 3. LLM Provider | ✅ Complete | 77 |
+| 4. Agent Architecture | ✅ Complete | 41 |
+| 5. Memory Systems | ✅ Complete | 74 |
+| 6. RAG Pipeline | ✅ Complete | 67 |
+| 7. API Layer | ✅ Complete | 34 |
+| 8. Guardrails | ✅ Complete | 67 |
+| 9. Evaluation | ✅ Complete | 30 |
+| 10. Deployment | ✅ Complete | 36 |
+| **Total** | **10/10 complete** | **494** |
 
 ---
 
 ## Agentic AI Concepts Covered
 
-This project is a learning vehicle for production-grade agentic AI patterns:
-
-| # | Concept | Implementation |
-|---|---------|---------------|
-| 1 | LangGraph | Workflow orchestration with state machines and cycles |
-| 2 | LangSmith | Observability, tracing, evaluation datasets |
-| 3 | Database Design | MongoDB documents + Weaviate vectors |
-| 4 | Context Management | Conversation state, workflow checkpoints |
-| 5 | Short-term Memory | LangGraph messages with sliding window + summarization |
-| 6 | Long-term Memory | MongoDB collections + Weaviate embeddings |
-| 7 | Evaluation | Quality metrics, golden datasets, layered testing |
-| 8 | Guardrails | Input/output validation, PII detection, LLM moderation |
-| 9 | Chain of Thought | Structured reasoning in specialized agents |
-| 10 | Model Selection | Task-based routing with circuit breaker and cost budgets |
-| 11 | RAG | Document-aware chunking, hybrid search, per-agent retrieval |
-| 12 | Human-in-the-Loop | Approval gates before critical actions |
+| # | Concept | Where |
+|---|---------|-------|
+| 1 | LangGraph state machines | `backend/src/workflows/graphs/` |
+| 2 | Human-in-the-loop (HITL) | `apply.py` + `cover_letter.py` graph |
+| 3 | Persistent checkpoints | `backend/src/workflows/checkpointer.py` (MongoDBSaver) |
+| 4 | SSE streaming | `GET /apply/.../cover-letter/stream` |
+| 5 | Multi-provider LLM routing | `backend/src/llm/manager.py` + `models.py` |
+| 6 | Circuit breaker | `backend/src/llm/circuit_breaker.py` |
+| 7 | Cost tracking | `backend/src/llm/cost_tracker.py` → `llm_usage` collection |
+| 8 | RAG with hybrid search | `backend/src/rag/` + Weaviate hybrid (BM25 + vector) |
+| 9 | Document-aware chunking | `backend/src/rag/chunker.py` |
+| 10 | Per-agent memory recipes | `backend/src/memory/recipes.py` |
+| 11 | Input/output guardrails | `backend/src/guardrails/` |
+| 12 | PII detection | `backend/src/guardrails/pii_detector.py` |
 
 ---
 
-## Environment Variables
+## Testing
 
-See [`.env.example`](.env.example) for the full template. Key variables:
+All test commands run from the `backend/` directory:
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GROQ_API_KEY` | Recommended | Free LLM fallback (500K tokens/day) |
-| `ANTHROPIC_API_KEY` | Optional | Primary LLM (Claude Sonnet) |
-| `OPENAI_API_KEY` | Optional | Secondary LLM (GPT-4o-mini) |
-| `MONGODB_URL` | Yes | Default: `mongodb://localhost:27017` |
-| `WEAVIATE_URL` | Yes | Default: `http://localhost:8080` |
-| `JWT_SECRET_KEY` | Yes | Change from default in production |
-| `LANGCHAIN_API_KEY` | Optional | LangSmith tracing (5K traces/month free) |
+```bash
+cd backend
+
+# Unit tests (fast, no external deps)
+.venv/Scripts/python.exe -m pytest tests/unit/ -q     # Windows
+uv run pytest tests/unit/ -q                           # Mac/Linux
+
+# With coverage
+uv run pytest --cov=src tests/unit/
+
+# Single module
+uv run pytest tests/unit/test_llm/ -v
+```
+
+Test conventions: see [`docs/DEVELOPMENT_GUIDE.md`](docs/DEVELOPMENT_GUIDE.md).
 
 ---
 
 ## Documentation
 
-- [`docs/DETAILED_PLAN.md`](docs/DETAILED_PLAN.md) — Complete implementation plan with technical specs for all 10 modules
-- [`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md) — Comprehensive design discussion history and decision rationale
-- [`CLAUDE.md`](CLAUDE.md) — Project context for AI-assisted development sessions
+| Document | Contents |
+|----------|---------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design, component breakdown, data flows, key patterns |
+| [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) | All endpoints with schemas, error codes, examples |
+| [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) | MongoDB collections, Weaviate schema, indexes, enums |
+| [`docs/DEVELOPMENT_GUIDE.md`](docs/DEVELOPMENT_GUIDE.md) | Setup, conventions, adding features, debugging |
+| [`CLAUDE.md`](CLAUDE.md) | AI assistant context (project rules for Claude Code) |
+
+---
+
+## Environment Variables
+
+See [`backend/.env.example`](backend/.env.example) for the full template.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GROQ_API_KEY` | Recommended | — | Free LLM fallback (Llama 3.3 70B) |
+| `ANTHROPIC_API_KEY` | Optional | — | Primary LLM (Claude Sonnet) |
+| `OPENAI_API_KEY` | Optional | — | Secondary LLM + Moderation API |
+| `MONGODB_URL` | Yes | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGODB_DATABASE` | No | `job_hunt` | Database name |
+| `WEAVIATE_URL` | Yes | `http://localhost:8080` | Weaviate instance URL |
+| `JWT_SECRET_KEY` | Yes | `change-me-in-production` | **Change this** |
+| `JWT_ALGORITHM` | No | `HS256` | JWT signing algorithm |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | No | `15` | Access token TTL |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | No | `7` | Refresh token TTL |
+| `LANGCHAIN_TRACING_V2` | Optional | `false` | Enable LangSmith tracing |
+| `LANGCHAIN_API_KEY` | Optional | — | LangSmith API key |
+| `APP_ENV` | No | `development` | `development` or `production` |
+| `DEBUG` | No | `true` | Enables Swagger UI, verbose logs |
 
 ---
 
 ## License
 
-This project is for educational and personal use.
+Educational and personal use.

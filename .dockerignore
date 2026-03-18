@@ -1,0 +1,65 @@
+# ---------------------------------------------------------------------------
+# .dockerignore — exclude files from the Docker build context
+# ---------------------------------------------------------------------------
+# Everything listed here is excluded from `docker build`, which:
+#   - Speeds up builds (smaller context sent to Docker daemon)
+#   - Prevents secrets from leaking into image layers
+#   - Avoids cache-busting from irrelevant file changes
+# ---------------------------------------------------------------------------
+
+# -- Secrets (NEVER bake into images) --
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# -- Python cache and build artifacts --
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# -- Virtual environments --
+.venv/
+venv/
+env/
+
+# -- Test and coverage artifacts --
+backend/tests/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# -- Development tools --
+.ruff_cache/
+.mypy_cache/
+.git/
+.gitignore
+.github/
+
+# -- IDE and editor files --
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -- Documentation --
+docs/
+*.md
+!README.md
+
+# -- Docker files (not needed inside the image) --
+docker/
+
+# -- Frontend (not needed in backend image) --
+frontend/
+
+# -- Logs --
+*.log
+logs/

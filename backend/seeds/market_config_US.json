@@ -1,0 +1,85 @@
+{
+  "region_code": "US",
+  "region_name": "United States",
+  "compensation_structure": {
+    "components": [
+      {"name": "Base Salary", "percentage_of_ctc": 70.0, "description": "Annual base salary", "is_statutory": false},
+      {"name": "Bonus", "percentage_of_ctc": 10.0, "description": "Annual performance bonus (typical)", "is_statutory": false},
+      {"name": "401(k) Match", "percentage_of_ctc": 4.0, "description": "Employer 401(k) match (up to 6% of salary)", "is_statutory": false},
+      {"name": "Health Insurance", "percentage_of_ctc": 8.0, "description": "Employer-sponsored health, dental, vision", "is_statutory": false},
+      {"name": "RSU/Stock", "percentage_of_ctc": 8.0, "description": "Restricted stock units (common in tech)", "is_statutory": false}
+    ],
+    "ppp_factor": 1.0,
+    "currency_code": "USD",
+    "currency_symbol": "$",
+    "numbering_system": "international"
+  },
+  "hiring_process": {
+    "notice_period_norm_days": 14,
+    "buyout_culture": false,
+    "channels": ["LinkedIn", "Indeed", "Glassdoor", "company career pages", "recruiters"]
+  },
+  "resume_conventions": {
+    "include_photo": false,
+    "include_dob": false,
+    "include_declaration": false,
+    "expected_pages_min": 1,
+    "expected_pages_max": 2,
+    "paper_size": "letter",
+    "expected_salary_field": false
+  },
+  "job_platforms": [
+    {
+      "name": "LinkedIn",
+      "base_url": "https://www.linkedin.com/jobs",
+      "supports_api": false,
+      "market_share_pct": 35.0,
+      "recommended_for": ["professional roles", "networking", "all industries"]
+    },
+    {
+      "name": "Indeed",
+      "base_url": "https://www.indeed.com",
+      "supports_api": true,
+      "market_share_pct": 30.0,
+      "recommended_for": ["entry-level", "hourly", "all industries"]
+    },
+    {
+      "name": "Glassdoor",
+      "base_url": "https://www.glassdoor.com",
+      "supports_api": false,
+      "market_share_pct": 10.0,
+      "recommended_for": ["salary research", "company reviews", "tech"]
+    },
+    {
+      "name": "Levels.fyi",
+      "base_url": "https://www.levels.fyi",
+      "supports_api": false,
+      "market_share_pct": 5.0,
+      "recommended_for": ["tech compensation data", "FAANG"]
+    }
+  ],
+  "legal": {
+    "non_compete_enforceable": true,
+    "data_protection_law": "State-level (CCPA in California, no federal law)",
+    "worker_protections": "At-will employment in most states; FLSA, FMLA, ADA, Title VII federal protections",
+    "visa_requirements": [
+      {"type": "H-1B", "description": "Specialty occupation visa, lottery-based, 6-year max"},
+      {"type": "L-1", "description": "Intra-company transfer visa"},
+      {"type": "O-1", "description": "Extraordinary ability visa"},
+      {"type": "OPT/CPT", "description": "For F-1 students, 12-month OPT (36 for STEM)"}
+    ]
+  },
+  "cultural": {
+    "languages": ["English"],
+    "formality_level": "casual",
+    "family_decision_involvement": "low",
+    "referral_importance": "high",
+    "interview_style": "behavioral-heavy"
+  },
+  "infrastructure": {
+    "connectivity_level": "high",
+    "primary_messaging": "email",
+    "payment_rails": ["ACH", "wire transfer", "direct deposit"],
+    "identity_systems": ["SSN", "state ID", "passport"]
+  }
+}

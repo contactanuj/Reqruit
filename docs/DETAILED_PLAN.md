@@ -91,7 +91,7 @@
 | jobs | Job listings | title, description, requirements{}, salary{} |
 | companies | Company info | name, culture_notes, tech_stack[], research{} |
 | contacts | LinkedIn POCs | name, role, linkedin_url, contacted |
-| applications | Pipeline items | status, match_score, applied_at |
+| applications | Pipeline items | status, match_score (db only, not exposed via API), applied_at |
 | documents | Generated docs | type, content, version, is_approved |
 | outreach_messages | LinkedIn messages | message_type, content, is_sent |
 | interviews | Interview records | scheduled_at, type, notes{}, questions[] |
@@ -186,7 +186,7 @@ class ModelManager:
 | Workflow | Agents |
 |----------|--------|
 | Profile Setup | ResumeParser, EntityExtractor, ProfileEnhancer |
-| Job Discovery | JobSearcher, JobMatcher, CompanyResearcher, POCFinder |
+| Job Discovery | JobSearcher, JobMatcher (not yet implemented), CompanyResearcher, POCFinder |
 | Application | ResumeTailor, CoverLetterWriter, OutreachComposer |
 | Interview Prep | CompanyBrief, QuestionGenerator, STARHelper, MockInterviewer |
 
@@ -232,7 +232,7 @@ Each agent has a tailored retrieval recipe:
 | ResumeParser | 0% | 100% | Extraction only |
 | ProfileEnhancer | 70% | 30% | Semantic skill matching |
 | JobSearcher | 0% | 100% | Outbound search, dedup |
-| JobMatcher | 60% | 40% | Semantic + calibration |
+| JobMatcher (not yet implemented) | 60% | 40% | Semantic + calibration |
 | CompanyResearcher | 0% | 100% | Freshness matters |
 | POCFinder | 0% | 100% | LinkedIn lookup |
 | ResumeTailor | 70% | 30% | Match experience to JD |

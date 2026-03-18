@@ -507,7 +507,7 @@ Task-based routing avoids these problems by having the developer explicitly decl
 | Workflow | Agents |
 |----------|--------|
 | Profile Setup | ResumeParser, EntityExtractor, ProfileEnhancer |
-| Job Discovery | JobSearcher, JobMatcher, CompanyResearcher, POCFinder |
+| Job Discovery | JobSearcher, JobMatcher (not yet implemented), CompanyResearcher, POCFinder |
 | Application | ResumeTailor, CoverLetterWriter, OutreachComposer |
 | Interview Prep | CompanyBrief, QuestionGenerator, STARHelper, MockInterviewer |
 
@@ -596,7 +596,7 @@ STAGE 1        STAGE 2        STAGE 3        STAGE 4        STAGE 5
 | Feature | Description | Agents |
 |---------|-------------|--------|
 | Job Search | Manual entry, URL paste | JobSearcher |
-| Job Matching | Semantic similarity + preferences | JobMatcher |
+| Job Matching | Semantic similarity + preferences | JobMatcher (not yet implemented) |
 | Company Research | Culture, tech stack, news | CompanyResearcher |
 | POC Discovery | Find LinkedIn contacts by role | POCFinder |
 
@@ -648,7 +648,7 @@ STAGE 1        STAGE 2        STAGE 3        STAGE 4        STAGE 5
 ┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
 │   SERVICE LAYER     │ │    AGENT LAYER      │ │  WORKFLOW ENGINE    │
 │ ProfileService      │ │ ResumeAnalyzer      │ │ LangGraph           │
-│ JobService          │ │ JobMatcher          │ │ State Management    │
+│ JobService          │ │ JobMatcher (n/i)    │ │ State Management    │
 │ ApplicationService  │ │ CoverLetterWriter   │ │ Checkpointing       │
 │ DocumentService     │ │ InterviewPrepper    │ │ Human-in-Loop       │
 └─────────────────────┘ └─────────────────────┘ └─────────────────────┘
@@ -685,7 +685,7 @@ STAGE 1        STAGE 2        STAGE 3        STAGE 4        STAGE 5
 | jobs | Job listings | title, description, requirements{}, salary{} | Ref → companies |
 | companies | Company info | name, culture_notes, tech_stack[], research{} | Standalone |
 | contacts | LinkedIn POCs | name, role, linkedin_url, contacted | Ref → companies |
-| applications | Pipeline items | status, match_score, applied_at | Ref → users, jobs |
+| applications | Pipeline items | status, match_score (db only, not exposed via API), applied_at | Ref → users, jobs |
 | documents | Generated docs | type, content, version, is_approved | Ref → applications |
 | outreach_messages | LinkedIn messages | message_type, content, is_sent | Ref → applications, contacts |
 | interviews | Interview records | scheduled_at, type, notes{}, questions[] | Ref → applications |
@@ -806,7 +806,7 @@ Each agent gets a tailored retrieval recipe. NOT the same for every agent.
 |-------|---------------------|-------------------|----------|
 | ResumeParser | 0% | 100% | Extraction only |
 | ProfileEnhancer | 70% | 30% | Semantic skill matching |
-| JobMatcher | 60% | 40% | Semantic + calibration |
+| JobMatcher (not yet implemented) | 60% | 40% | Semantic + calibration |
 | ResumeTailor | 70% | 30% | Match experience to JD |
 | CoverLetterWriter | 50% | 50% | Similar letters + style |
 | STARHelper | 90% | 10% | Pure semantic matching |

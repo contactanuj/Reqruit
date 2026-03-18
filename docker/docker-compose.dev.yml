@@ -1,0 +1,36 @@
+# ---------------------------------------------------------------------------
+# Docker Compose development overrides
+# ---------------------------------------------------------------------------
+# Extends docker-compose.yml with development-specific settings.
+#
+# Usage:
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
+#
+# What this adds:
+#   - Hot-reload: source code is mounted into the container, uvicorn restarts
+#     automatically on file changes (no rebuild required)
+#   - Single worker: --reload is incompatible with --workers > 1
+#   - Verbose logging: --log-level debug for uvicorn output
+#
+# In production, use docker-compose.yml alone (no -f override):
+#   docker compose -f docker/docker-compose.yml up -d
+# ---------------------------------------------------------------------------
+
+services:
+  app:
+    # Override the production CMD to enable hot-reload
+    command:
+      - uvicorn
+      - src.api.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --reload
+      - --log-level
+      - debug
+
+    # Mount source code read-write so --reload can track changes.
+    # The base compose.yml uses :ro (read-only) for production safety.
+    volumes:
+      - ../backend/src:/app/src

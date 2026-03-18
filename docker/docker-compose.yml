@@ -36,7 +36,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ../.env
+      - ../backend/.env
     depends_on:
       mongodb:
         condition: service_started
@@ -45,7 +45,7 @@ services:
     # Mount source code for development hot-reload.
     # In production, the code is baked into the image (no volume mount).
     volumes:
-      - ../src:/app/src:ro
+      - ../backend/src:/app/src:ro
     restart: unless-stopped
 
   # -- MongoDB (Operational Database) --
@@ -68,7 +68,7 @@ services:
   # Stores: ResumeChunk, JobEmbedding, CoverLetterEmbedding, STARStoryEmbedding.
   # Used for hybrid search (BM25 + vector) with metadata filtering.
   weaviate:
-    image: cr.weaviate.io/semitechnologies/weaviate:1.28.4
+    image: semitechnologies/weaviate:1.28.4
     ports:
       - "8080:8080"     # REST API
       - "50051:50051"   # gRPC (used by weaviate-client v4 for batch operations)

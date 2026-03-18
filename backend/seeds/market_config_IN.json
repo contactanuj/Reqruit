@@ -1,0 +1,84 @@
+{
+  "region_code": "IN",
+  "region_name": "India",
+  "compensation_structure": {
+    "components": [
+      {"name": "Basic", "percentage_of_ctc": 40.0, "description": "Base salary, used for PF/gratuity calculations", "is_statutory": false},
+      {"name": "HRA", "percentage_of_ctc": 20.0, "description": "House Rent Allowance (50% Basic metro, 40% non-metro)", "is_statutory": false},
+      {"name": "Special Allowance", "percentage_of_ctc": null, "description": "Remainder after all other components", "is_statutory": false},
+      {"name": "Employer PF", "percentage_of_ctc": 4.8, "description": "12% of Basic, employer contribution", "is_statutory": true},
+      {"name": "Employee PF", "percentage_of_ctc": 4.8, "description": "12% of Basic, employee contribution", "is_statutory": true},
+      {"name": "Gratuity", "percentage_of_ctc": 1.92, "description": "4.81% of Basic", "is_statutory": true}
+    ],
+    "ppp_factor": 22.0,
+    "currency_code": "INR",
+    "currency_symbol": "₹",
+    "numbering_system": "indian"
+  },
+  "hiring_process": {
+    "notice_period_norm_days": 60,
+    "buyout_culture": true,
+    "channels": ["Naukri", "LinkedIn", "employee referrals", "campus placement", "Indeed"]
+  },
+  "resume_conventions": {
+    "include_photo": false,
+    "include_dob": false,
+    "include_declaration": true,
+    "expected_pages_min": 1,
+    "expected_pages_max": 3,
+    "paper_size": "A4",
+    "expected_salary_field": true
+  },
+  "job_platforms": [
+    {
+      "name": "Naukri",
+      "base_url": "https://www.naukri.com",
+      "supports_api": false,
+      "market_share_pct": 45.0,
+      "recommended_for": ["IT", "engineering", "sales", "marketing"]
+    },
+    {
+      "name": "LinkedIn India",
+      "base_url": "https://www.linkedin.com/jobs",
+      "supports_api": false,
+      "market_share_pct": 25.0,
+      "recommended_for": ["senior roles", "MNCs", "startups"]
+    },
+    {
+      "name": "Indeed India",
+      "base_url": "https://www.indeed.co.in",
+      "supports_api": true,
+      "market_share_pct": 10.0,
+      "recommended_for": ["entry-level", "operations", "BPO"]
+    },
+    {
+      "name": "Instahyre",
+      "base_url": "https://www.instahyre.com",
+      "supports_api": false,
+      "market_share_pct": 5.0,
+      "recommended_for": ["tech", "product", "startups"]
+    }
+  ],
+  "legal": {
+    "non_compete_enforceable": false,
+    "data_protection_law": "Digital Personal Data Protection Act 2023 (DPDPA)",
+    "worker_protections": "Industrial Disputes Act, Shops and Establishments Act (state-level)",
+    "visa_requirements": [
+      {"type": "Employment Visa", "description": "Required for foreign nationals working in India"},
+      {"type": "Business Visa", "description": "For attending meetings, conferences — not for employment"}
+    ]
+  },
+  "cultural": {
+    "languages": ["English", "Hindi", "Tamil", "Telugu", "Kannada", "Bengali", "Marathi"],
+    "formality_level": "moderate",
+    "family_decision_involvement": "high",
+    "referral_importance": "high",
+    "interview_style": "technical-heavy"
+  },
+  "infrastructure": {
+    "connectivity_level": "moderate",
+    "primary_messaging": "WhatsApp",
+    "payment_rails": ["UPI", "NEFT", "IMPS", "bank transfer"],
+    "identity_systems": ["Aadhaar", "PAN"]
+  }
+}

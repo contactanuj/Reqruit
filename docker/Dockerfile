@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Multi-stage Dockerfile — Job Hunt Command Center
+# Multi-stage Dockerfile — Reqruit
 # ---------------------------------------------------------------------------
 # Two stages:
 #   1. Builder: installs uv and project dependencies (cached layer)
@@ -32,7 +32,7 @@ WORKDIR /app
 
 # Copy dependency files first (for layer caching).
 # When only source code changes, this layer is cached.
-COPY pyproject.toml uv.lock* ./
+COPY backend/pyproject.toml backend/uv.lock* ./
 
 # Install dependencies into a virtual environment.
 # --no-dev: exclude test/lint dependencies from production image.
@@ -48,7 +48,7 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 
 # Copy application source code
-COPY src/ /app/src/
+COPY backend/src/ /app/src/
 
 # Add the virtual environment to PATH so `python` resolves to venv Python
 ENV PATH="/app/.venv/bin:$PATH"
@@ -59,6 +59,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
+
+# Docker health check — polls /health/ready every 30s.
+# start_period gives the app time to load models and connect to DBs (~60s).
+# If the check fails 3 times in a row, the container is marked unhealthy.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')" || exit 1
 
 # Run with uvicorn.
 # --host 0.0.0.0: listen on all interfaces (required inside Docker).
